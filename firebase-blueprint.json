@@ -1,0 +1,178 @@
+{
+  "entities": {
+    "TeacherProfile": {
+      "title": "TeacherProfile",
+      "description": "Authenticated tuition teacher profile and credentials",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Teacher Firebase Auth UID", "maxLength": 128 },
+        "email": { "type": "string", "description": "Teacher email address", "maxLength": 128 },
+        "displayName": { "type": "string", "description": "Teacher display name", "maxLength": 100 },
+        "tuitionName": { "type": "string", "description": "Name of the tuition center", "maxLength": 120 },
+        "phone": { "type": "string", "description": "Teacher mobile number", "maxLength": 20 },
+        "address": { "type": "string", "description": "Tuition center address", "maxLength": 300 },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Update timestamp" }
+      },
+      "required": ["uid", "email", "tuitionName"]
+    },
+    "Student": {
+      "title": "Student",
+      "description": "Student registered under a teacher with individual joining-date monthly fee cycles",
+      "type": "object",
+      "properties": {
+        "studentId": { "type": "string", "description": "Unique student roll number / ID", "maxLength": 64 },
+        "teacherUid": { "type": "string", "description": "Teacher owner UID", "maxLength": 128 },
+        "name": { "type": "string", "description": "Student full name", "maxLength": 100 },
+        "fatherName": { "type": "string", "description": "Father or guardian name", "maxLength": 100 },
+        "joiningDate": { "type": "string", "format": "date", "description": "Joining date YYYY-MM-DD" },
+        "mobileNumber": { "type": "string", "description": "Student mobile number", "maxLength": 20 },
+        "parentWhatsAppNumber": { "type": "string", "description": "Parent WhatsApp number for fee reminders", "maxLength": 20 },
+        "monthlyFee": { "type": "number", "description": "Monthly tuition fee in INR" },
+        "photoUrl": { "type": "string", "description": "Optional student photo data URL or avatar", "maxLength": 500000 },
+        "notes": { "type": "string", "description": "Optional notes or remarks", "maxLength": 1000 },
+        "status": { "type": "string", "enum": ["ACTIVE", "DEACTIVATED"], "description": "Active or deactivated status" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp created" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Timestamp updated" }
+      },
+      "required": ["studentId", "teacherUid", "name", "fatherName", "joiningDate", "monthlyFee", "parentWhatsAppNumber", "status"]
+    },
+    "FeeCycle": {
+      "title": "FeeCycle",
+      "description": "Individual monthly fee cycle calculated strictly from student joining date",
+      "type": "object",
+      "properties": {
+        "cycleId": { "type": "string", "description": "Deterministic cycle ID (e.g. studentId_cycleIndex)", "maxLength": 128 },
+        "studentId": { "type": "string", "description": "Student document ID", "maxLength": 64 },
+        "teacherUid": { "type": "string", "description": "Teacher owner UID", "maxLength": 128 },
+        "studentName": { "type": "string", "description": "Student name cached for quick lookup", "maxLength": 100 },
+        "cycleNumber": { "type": "number", "description": "Sequence number of the month (1, 2, 3...)" },
+        "cycleStartDate": { "type": "string", "format": "date", "description": "Cycle period start date YYYY-MM-DD" },
+        "cycleDueDate": { "type": "string", "format": "date", "description": "Fee due date YYYY-MM-DD (1 month after start)" },
+        "monthLabel": { "type": "string", "description": "Billing period month label e.g. Dec 2026", "maxLength": 50 },
+        "feeAmount": { "type": "number", "description": "Fee scheduled for this cycle" },
+        "paidAmount": { "type": "number", "description": "Amount paid against this cycle" },
+        "outstandingAmount": { "type": "number", "description": "Remaining unpaid balance for this cycle" },
+        "status": { "type": "string", "enum": ["PENDING", "PARTIAL", "PAID"], "description": "Cycle payment status" },
+        "lastPaymentDate": { "type": "string", "description": "Date of latest payment", "maxLength": 50 },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Record creation timestamp" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Record updated timestamp" }
+      },
+      "required": ["cycleId", "studentId", "teacherUid", "cycleDueDate", "feeAmount", "outstandingAmount", "status"]
+    },
+    "Payment": {
+      "title": "Payment",
+      "description": "Fee collection transaction record with digital receipt",
+      "type": "object",
+      "properties": {
+        "paymentId": { "type": "string", "description": "Unique payment transaction ID", "maxLength": 64 },
+        "receiptNumber": { "type": "string", "description": "Formatted receipt number e.g. RCPT-2026-0001", "maxLength": 64 },
+        "studentId": { "type": "string", "description": "Student document ID", "maxLength": 64 },
+        "studentName": { "type": "string", "description": "Student name", "maxLength": 100 },
+        "teacherUid": { "type": "string", "description": "Teacher UID", "maxLength": 128 },
+        "feeCycleId": { "type": "string", "description": "Target fee cycle ID or ALL_OUTSTANDING", "maxLength": 128 },
+        "cyclePeriod": { "type": "string", "description": "Fee period covered", "maxLength": 100 },
+        "monthlyFee": { "type": "number", "description": "Student monthly fee at time of payment" },
+        "previousOutstanding": { "type": "number", "description": "Outstanding amount before this payment" },
+        "paymentAmount": { "type": "number", "description": "Amount received" },
+        "remainingOutstanding": { "type": "number", "description": "Remaining balance after this payment" },
+        "paymentDate": { "type": "string", "format": "date", "description": "Date payment was received YYYY-MM-DD" },
+        "paymentMethod": { "type": "string", "enum": ["Cash", "UPI", "Bank Transfer", "Other"], "description": "Payment mode" },
+        "transactionId": { "type": "string", "description": "UPI / bank transaction reference", "maxLength": 100 },
+        "notes": { "type": "string", "description": "Payment notes or remarks", "maxLength": 500 },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp recorded" }
+      },
+      "required": ["paymentId", "receiptNumber", "studentId", "teacherUid", "paymentAmount", "paymentDate", "paymentMethod"]
+    },
+    "NotificationRecord": {
+      "title": "NotificationRecord",
+      "description": "Daily teacher push notification log for pending/overdue fees",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Notification ID", "maxLength": 128 },
+        "teacherUid": { "type": "string", "description": "Teacher UID", "maxLength": 128 },
+        "studentId": { "type": "string", "description": "Student ID", "maxLength": 64 },
+        "studentName": { "type": "string", "description": "Student name", "maxLength": 100 },
+        "title": { "type": "string", "description": "Notification title e.g. FEE PENDING", "maxLength": 150 },
+        "body": { "type": "string", "description": "Notification content body", "maxLength": 500 },
+        "outstandingAmount": { "type": "number", "description": "Pending amount at notification time" },
+        "daysPending": { "type": "number", "description": "Days fee has been pending" },
+        "type": { "type": "string", "enum": ["DUE_TODAY", "OVERDUE", "PAYMENT_RECEIVED", "DAILY_SUMMARY"], "description": "Category" },
+        "read": { "type": "boolean", "description": "Whether read by teacher" },
+        "sentAt": { "type": "string", "format": "date-time", "description": "Dispatch timestamp" }
+      },
+      "required": ["id", "teacherUid", "title", "body", "type", "sentAt"]
+    },
+    "MessageLog": {
+      "title": "MessageLog",
+      "description": "WhatsApp and SMS reminder dispatch history",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Message log ID", "maxLength": 128 },
+        "teacherUid": { "type": "string", "description": "Teacher UID", "maxLength": 128 },
+        "studentId": { "type": "string", "description": "Student ID", "maxLength": 64 },
+        "studentName": { "type": "string", "description": "Student name", "maxLength": 100 },
+        "channel": { "type": "string", "enum": ["WHATSAPP", "SMS"], "description": "Communication channel" },
+        "recipientNumber": { "type": "string", "description": "Recipient phone number", "maxLength": 20 },
+        "messageText": { "type": "string", "description": "Full text of sent reminder", "maxLength": 1000 },
+        "status": { "type": "string", "enum": ["SENT", "DELIVERED", "FAILED", "MANUAL_CLICK_OPENED"], "description": "Delivery status" },
+        "provider": { "type": "string", "description": "Meta WhatsApp Cloud API or SMS gateway name", "maxLength": 50 },
+        "errorMessage": { "type": "string", "description": "Error details if failed", "maxLength": 300 },
+        "sentAt": { "type": "string", "format": "date-time", "description": "Timestamp" }
+      },
+      "required": ["id", "teacherUid", "studentId", "channel", "recipientNumber", "messageText", "status", "sentAt"]
+    },
+    "TeacherSettings": {
+      "title": "TeacherSettings",
+      "description": "Teacher tuition configuration, reminders and API credentials",
+      "type": "object",
+      "properties": {
+        "teacherUid": { "type": "string", "description": "Teacher Auth UID", "maxLength": 128 },
+        "teacherName": { "type": "string", "description": "Teacher full name", "maxLength": 100 },
+        "tuitionName": { "type": "string", "description": "Tuition Academy name", "maxLength": 120 },
+        "teacherPhone": { "type": "string", "description": "Teacher contact phone", "maxLength": 20 },
+        "tuitionAddress": { "type": "string", "description": "Center physical address", "maxLength": 300 },
+        "currency": { "type": "string", "description": "INR / ₹", "maxLength": 10 },
+        "timezone": { "type": "string", "description": "Asia/Kolkata default", "maxLength": 50 },
+        "dailyReminderEnabled": { "type": "boolean", "description": "Daily teacher push notification enabled" },
+        "whatsappReminderEnabled": { "type": "boolean", "description": "Automatic WhatsApp reminders enabled" },
+        "smsReminderEnabled": { "type": "boolean", "description": "SMS reminders enabled" },
+        "fcmToken": { "type": "string", "description": "Teacher device web push FCM token", "maxLength": 500 },
+        "whatsappConfig": { "type": "object", "description": "Meta WhatsApp Business API settings" },
+        "smsConfig": { "type": "object", "description": "SMS Gateway API settings" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Last settings update" }
+      },
+      "required": ["teacherUid", "tuitionName", "teacherName", "currency", "timezone"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "TeacherProfile",
+      "description": "Tuition teacher profile"
+    },
+    "/students/{studentId}": {
+      "schema": "Student",
+      "description": "Tuition students registered under the teacher"
+    },
+    "/feeCycles/{cycleId}": {
+      "schema": "FeeCycle",
+      "description": "Calculated monthly fee cycle records"
+    },
+    "/payments/{paymentId}": {
+      "schema": "Payment",
+      "description": "Fee payment collection transactions"
+    },
+    "/notifications/{notificationId}": {
+      "schema": "NotificationRecord",
+      "description": "Teacher daily push notifications"
+    },
+    "/messageLogs/{logId}": {
+      "schema": "MessageLog",
+      "description": "WhatsApp and SMS reminder logs"
+    },
+    "/settings/{teacherUid}": {
+      "schema": "TeacherSettings",
+      "description": "Teacher tuition and reminder configuration"
+    }
+  }
+}

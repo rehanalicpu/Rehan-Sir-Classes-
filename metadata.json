@@ -1,0 +1,7 @@
+{
+  "name": "REHAN SIR TUITION MANAGER",
+  "description": "Mobile-first Tuition Management Web Application for private tuition teachers with joining-date fee calculation, pending balance tracking, fee collection, daily notifications, and WhatsApp reminders.",
+  "requestFramePermissions": ["notifications"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+

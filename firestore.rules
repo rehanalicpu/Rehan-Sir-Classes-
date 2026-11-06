@@ -1,0 +1,164 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // Validation for User Profile
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'email', 'tuitionName']) &&
+        data.uid is string && data.uid == request.auth.uid &&
+        data.email is string && data.email.size() <= 128 &&
+        data.tuitionName is string && data.tuitionName.size() <= 120;
+    }
+
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow list: if isSignedIn() && resource.data.uid == request.auth.uid;
+      allow create: if isOwner(userId) && isValidUser(incoming());
+      allow update: if isOwner(userId) && isValidUser(incoming()) && incoming().uid == existing().uid;
+      allow delete: if isOwner(userId);
+    }
+
+    // Validation for Student
+    function isValidStudent(data) {
+      return data.keys().hasAll(['studentId', 'teacherUid', 'name', 'fatherName', 'joiningDate', 'monthlyFee', 'parentWhatsAppNumber', 'status']) &&
+        data.studentId is string && data.studentId.size() <= 64 &&
+        data.teacherUid is string && data.teacherUid == request.auth.uid &&
+        data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
+        data.fatherName is string && data.fatherName.size() <= 100 &&
+        data.joiningDate is string && data.joiningDate.size() <= 20 &&
+        data.monthlyFee is number && data.monthlyFee >= 0 &&
+        data.parentWhatsAppNumber is string && data.parentWhatsAppNumber.size() <= 20 &&
+        data.status in ['ACTIVE', 'DEACTIVATED'];
+    }
+
+    match /students/{studentId} {
+      allow get: if isSignedIn() && resource.data.teacherUid == request.auth.uid;
+      allow list: if isSignedIn() && resource.data.teacherUid == request.auth.uid;
+      allow create: if isSignedIn() && isValidStudent(incoming());
+      allow update: if isSignedIn() && isValidStudent(incoming()) && incoming().teacherUid == existing().teacherUid;
+      allow delete: if isSignedIn() && existing().teacherUid == request.auth.uid;
+    }
+
+    // Validation for FeeCycle
+    function isValidFeeCycle(data) {
+      return data.keys().hasAll(['cycleId', 'studentId', 'teacherUid', 'cycleDueDate', 'feeAmount', 'outstandingAmount', 'status']) &&
+        data.cycleId is string && data.cycleId.size() <= 128 &&
+        data.studentId is string && data.studentId.size() <= 64 &&
+        data.teacherUid is string && data.teacherUid == request.auth.uid &&
+        data.cycleDueDate is string && data.cycleDueDate.size() <= 20 &&
+        data.feeAmount is number && data.feeAmount >= 0 &&
+        data.outstandingAmount is number && data.outstandingAmount >= 0 &&
+        data.status in ['PENDING', 'PARTIAL', 'PAID'];
+    }
+
+    match /feeCycles/{cycleId} {
+      allow get: if isSignedIn() && resource.data.teacherUid == request.auth.uid;
+      allow list: if isSignedIn() && resource.data.teacherUid == request.auth.uid;
+      allow create: if isSignedIn() && isValidFeeCycle(incoming());
+      allow update: if isSignedIn() && isValidFeeCycle(incoming()) && incoming().teacherUid == existing().teacherUid;
+      allow delete: if isSignedIn() && existing().teacherUid == request.auth.uid;
+    }
+
+    // Validation for Payment
+    function isValidPayment(data) {
+      return data.keys().hasAll(['paymentId', 'receiptNumber', 'studentId', 'teacherUid', 'paymentAmount', 'paymentDate', 'paymentMethod']) &&
+        data.paymentId is string && data.paymentId.size() <= 64 &&
+        data.receiptNumber is string && data.receiptNumber.size() <= 64 &&
+        data.studentId is string && data.studentId.size() <= 64 &&
+        data.teacherUid is string && data.teacherUid == request.auth.uid &&
+        data.paymentAmount is number && data.paymentAmount > 0 &&
+        data.paymentDate is string && data.paymentDate.size() <= 20 &&
+        data.paymentMethod in ['Cash', 'UPI', 'Bank Transfer', 'Other'];
+    }
+
+    match /payments/{paymentId} {
+      allow get: if isSignedIn() && resource.data.teacherUid == request.auth.uid;
+      allow list: if isSignedIn() && resource.data.teacherUid == request.auth.uid;
+      allow create: if isSignedIn() && isValidPayment(incoming());
+      allow update: if isSignedIn() && isValidPayment(incoming()) && incoming().teacherUid == existing().teacherUid;
+      allow delete: if isSignedIn() && existing().teacherUid == request.auth.uid;
+    }
+
+    // Validation for NotificationRecord
+    function isValidNotification(data) {
+      return data.keys().hasAll(['id', 'teacherUid', 'title', 'body', 'type', 'sentAt']) &&
+        data.id is string && data.id.size() <= 128 &&
+        data.teacherUid is string && data.teacherUid == request.auth.uid &&
+        data.title is string && data.title.size() <= 150 &&
+        data.body is string && data.body.size() <= 500 &&
+        data.type in ['DUE_TODAY', 'OVERDUE', 'PAYMENT_RECEIVED', 'DAILY_SUMMARY'];
+    }
+
+    match /notifications/{notificationId} {
+      allow get: if isSignedIn() && resource.data.teacherUid == request.auth.uid;
+      allow list: if isSignedIn() && resource.data.teacherUid == request.auth.uid;
+      allow create: if isSignedIn() && isValidNotification(incoming());
+      allow update: if isSignedIn() && isValidNotification(incoming()) && incoming().teacherUid == existing().teacherUid;
+      allow delete: if isSignedIn() && existing().teacherUid == request.auth.uid;
+    }
+
+    // Validation for MessageLog
+    function isValidMessageLog(data) {
+      return data.keys().hasAll(['id', 'teacherUid', 'studentId', 'channel', 'recipientNumber', 'messageText', 'status', 'sentAt']) &&
+        data.id is string && data.id.size() <= 128 &&
+        data.teacherUid is string && data.teacherUid == request.auth.uid &&
+        data.studentId is string && data.studentId.size() <= 64 &&
+        data.channel in ['WHATSAPP', 'SMS'] &&
+        data.recipientNumber is string && data.recipientNumber.size() <= 20 &&
+        data.messageText is string && data.messageText.size() <= 1000 &&
+        data.status in ['SENT', 'DELIVERED', 'FAILED', 'MANUAL_CLICK_OPENED'];
+    }
+
+    match /messageLogs/{logId} {
+      allow get: if isSignedIn() && resource.data.teacherUid == request.auth.uid;
+      allow list: if isSignedIn() && resource.data.teacherUid == request.auth.uid;
+      allow create: if isSignedIn() && isValidMessageLog(incoming());
+      allow update: if isSignedIn() && isValidMessageLog(incoming()) && incoming().teacherUid == existing().teacherUid;
+      allow delete: if isSignedIn() && existing().teacherUid == request.auth.uid;
+    }
+
+    // Validation for TeacherSettings
+    function isValidSettings(data) {
+      return data.keys().hasAll(['teacherUid', 'tuitionName', 'teacherName', 'currency', 'timezone']) &&
+        data.teacherUid is string && data.teacherUid == request.auth.uid &&
+        data.tuitionName is string && data.tuitionName.size() <= 120 &&
+        data.teacherName is string && data.teacherName.size() <= 100 &&
+        data.currency is string && data.currency.size() <= 10 &&
+        data.timezone is string && data.timezone.size() <= 50;
+    }
+
+    match /settings/{teacherUid} {
+      allow get: if isOwner(teacherUid);
+      allow list: if isSignedIn() && resource.data.teacherUid == request.auth.uid;
+      allow create: if isOwner(teacherUid) && isValidSettings(incoming());
+      allow update: if isOwner(teacherUid) && isValidSettings(incoming()) && incoming().teacherUid == existing().teacherUid;
+      allow delete: if isOwner(teacherUid);
+    }
+  }
+}
